@@ -17,9 +17,6 @@ from PIL import Image
 
 st.set_page_config(page_title="СР1 — Розподілене ранжування", layout="wide")
 
-# ─────────────────────────────────────────────
-# ПРЕДМЕТНІ ОБЛАСТІ (завдання 1 — гнучке налаштування)
-# ─────────────────────────────────────────────
 DOMAIN_1 = {
     "name": "Астрономічні об'єкти",
     "objects": [
@@ -47,33 +44,22 @@ DOMAIN_1 = {
 }
 
 DOMAIN_2 = {
-    "name": "Планети Сонячної системи",
+    "name": "Коштовне каміння",
     "objects": [
-        {"name": "Mercury",  "img": "images/mercury.jpg"},
-        {"name": "Venus",    "img": "images/venus.jpg"},
-        {"name": "Earth",    "img": "images/earth.jpg"},
-        {"name": "Mars",     "img": "images/mars.jpg"},
-        {"name": "Jupiter",  "img": "images/jupiter.jpg"},
-        {"name": "Saturn",   "img": "images/saturn.jpg"},
-        {"name": "Uranus",   "img": "images/uranus.jpg"},
-        {"name": "Neptune",  "img": "images/neptune.jpg"},
-        {"name": "Pluto",    "img": "images/pluto.jpg"},
-        {"name": "Moon",     "img": "images/moon.jpg"},
-        {"name": "Europa",   "img": "images/europa.jpg"},
-        {"name": "Titan",    "img": "images/titan.jpg"},
-        {"name": "Callisto", "img": "images/callisto.jpg"},
-        {"name": "Sun",      "img": "images/sun.jpg"},
-        {"name": "Sirius",   "img": "images/sirius.jpg"},
-        {"name": "Andromeda","img": "images/andromeda.jpg"},
-        {"name": "Milky Way","img": "images/milkyway.jpg"},
-        {"name": "Comet",    "img": "images/comet.jpg"},
-        {"name": "Black Hole","img":"images/blackhole.jpg"},
-        {"name": "Wormhole", "img": "images/wormholes.jpg"},
+        {"name": "Діамант", "img": ""}, {"name": "Рубін", "img": ""},
+        {"name": "Сапфір", "img": ""}, {"name": "Смарагд", "img": ""},
+        {"name": "Аметист", "img": ""}, {"name": "Топаз", "img": ""},
+        {"name": "Опал", "img": ""}, {"name": "Аквамарин", "img": ""},
+        {"name": "Перлина", "img": ""}, {"name": "Гранат", "img": ""},
+        {"name": "Нефрит", "img": ""}, {"name": "Бірюза", "img": ""},
+        {"name": "Онікс", "img": ""}, {"name": "Ляпіс-лазур", "img": ""},
+        {"name": "Бурштин", "img": ""}, {"name": "Турмалін", "img": ""},
+        {"name": "Циркон", "img": ""}, {"name": "Шпінель", "img": ""},
+        {"name": "Місячний камінь", "img": ""}, {"name": "Малахіт", "img": ""}
     ]
 }
 
-DOMAINS = {"Астрономічні об'єкти": DOMAIN_1, "Планети Сонячної системи": DOMAIN_2}
-
+DOMAINS = {"Астрономічні об'єкти": DOMAIN_1, "Коштовне каміння": DOMAIN_2}
 EXPERTS = [
     "Вiка","Анна","Іван","Ромчик","Анастасiя","Лiза","Валерiя","Лера","Даша",
     "Настя","Максим","Веронiка","Вiкторiя","Дарина","Марина","Anastasiia",
@@ -89,6 +75,14 @@ HEURISTICS = {
     "E6": "Сума балів <= 3",
     "E7": "Об'єкт жодного разу не обирався на 1-му місці",
 }
+CUSTOM_DOMAIN_FILE = "custom_domain.json"
+if os.path.exists(CUSTOM_DOMAIN_FILE):
+    with open(CUSTOM_DOMAIN_FILE, "r", encoding="utf-8") as f:
+        try:
+            custom_domain_data = json.load(f)
+            DOMAINS[custom_domain_data["name"]] = custom_domain_data
+        except:
+            pass
 
 ADMIN_PASSWORD = "admin123"
 
@@ -494,6 +488,32 @@ if domain_choice != st.session_state["domain_name"]:
     save_domain(domain_choice)
     log_action("Користувач", f"Змінено предметну область на: {domain_choice}")
     st.rerun()
+
+st.sidebar.subheader("Власна предметна область")
+uploaded_domain = st.sidebar.file_uploader("Завантажте .txt файл (по 1 об'єкту в рядку)", type=["txt"])
+
+if uploaded_domain is not None:
+    # Читаємо файл і розбиваємо на рядки
+    content = uploaded_domain.read().decode("utf-8").splitlines()
+    # Створюємо список об'єктів (ігноруючи порожні рядки)
+    custom_objects = [{"name": line.strip(), "img": ""} for line in content if line.strip()]
+
+    if len(custom_objects) >= 3:
+        custom_domain_name = "Власна область (Завантажено)"
+        custom_domain_dict = {"name": custom_domain_name, "objects": custom_objects}
+
+        # Зберігаємо у локальний файл, щоб не зникало при оновленні сторінки
+        with open(CUSTOM_DOMAIN_FILE, "w", encoding="utf-8") as f:
+            json.dump(custom_domain_dict, f, ensure_ascii=False)
+
+        # Автоматично перемикаємо програму на цю нову область
+        st.session_state["domain_name"] = custom_domain_name
+        save_domain(custom_domain_name)
+        log_action("Користувач", "Завантажено власну предметну область")
+        st.sidebar.success("Успішно завантажено!")
+        st.rerun()
+    else:
+        st.sidebar.error("У файлі має бути щонайменше 3 об'єкти (щоб можна було обрати трійку).")
 
 # конфіденційний / відкритий режим (завдання 5)
 st.sidebar.subheader("Режим голосування")
