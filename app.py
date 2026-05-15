@@ -87,7 +87,6 @@ if os.path.exists(CUSTOM_DOMAIN_FILE):
 ADMIN_PASSWORD = "admin123"
 
 # файли даних
-VOTES_FILE   = "votes.csv"
 H_VOTES_FILE = "heuristic_votes.csv"
 LOG_FILE     = "protocol.log"
 DOMAIN_FILE  = "current_domain.json"
@@ -468,9 +467,9 @@ current_domain = DOMAINS[st.session_state["domain_name"]]
 OBJECTS = current_domain["objects"]
 OBJECT_NAMES = [o["name"] for o in OBJECTS]
 
-# завантажуємо рахунки з поточної предметної області
-scores, counts = load_scores(VOTES_FILE, OBJECTS)
-
+safe_domain_name = st.session_state["domain_name"].replace(" ", "_").replace("'", "")
+CURRENT_VOTES_FILE = f"votes_{safe_domain_name}.csv"
+scores, counts = load_scores(CURRENT_VOTES_FILE, OBJECTS)
 # ─────────────────────────────────────────────
 # БІЧНА ПАНЕЛЬ
 # ─────────────────────────────────────────────
@@ -639,12 +638,12 @@ if tab == "Голосування (ЛР1)":
                 [[saved_name, choice1, choice2, choice3]],
                 columns=["name", "choice1", "choice2", "choice3"]
             )
-            if os.path.exists(VOTES_FILE):
-                df = pd.read_csv(VOTES_FILE)
+            if os.path.exists(CURRENT_VOTES_FILE):
+                df = pd.read_csv(CURRENT_VOTES_FILE)
             else:
                 df = pd.DataFrame(columns=["name", "choice1", "choice2", "choice3"])
             df = pd.concat([df, new_vote], ignore_index=True)
-            df.to_csv(VOTES_FILE, index=False)
+            df.to_csv(CURRENT_VOTES_FILE, index=False)
             log_action("Користувач", f"Голосування: {saved_name} -> {choice1}, {choice2}, {choice3}")
             st.info(f"Обрані об'єкти: **{choice1}** > **{choice2}** > **{choice3}**")
 
@@ -861,7 +860,7 @@ elif tab == "ЛР3":
             ordered_keys = [k for k, _ in ranked_heuristics_from_votes(df_h)]
         winners_full, _ = apply_heuristicsStep(OBJECT_NAMES, ordered_keys, counts, scores)
         winners = sorted(winners_full, key=lambda x: scores[x], reverse=True)[:10]
-        triples = load_expert_triples_from_votes(VOTES_FILE, winners)
+        triples = load_expert_triples_from_votes(CURRENT_VOTES_FILE, winners)
     else:
         winners, triples = generate_mock_data(n_objs=8, n_experts=11,
                                               objects=OBJECT_NAMES)
@@ -1062,8 +1061,8 @@ elif tab == "ЛР4":
         ordered_keys = [k for k, _ in ranked_heuristics_from_votes(df_h)]
     winners_full, _ = apply_heuristicsStep(OBJECT_NAMES, ordered_keys, counts, scores)
     winners = sorted(winners_full, key=lambda x: scores[x], reverse=True)[:10]
-    raw_triples = load_raw_triples(VOTES_FILE)
-    triples_filtered = load_expert_triples_from_votes(VOTES_FILE, winners)
+    raw_triples = load_raw_triples(CURRENT_VOTES_FILE)
+    triples_filtered = load_expert_triples_from_votes(CURRENT_VOTES_FILE, winners)
 
     consensus_R = []
     df_sat = pd.DataFrame()
@@ -1178,9 +1177,9 @@ elif tab == "Зміна ранжувань":
     st.title("Незначна зміна індивідуальних ранжувань")
     st.markdown("Оберіть голос та змініть порядок об'єктів. Система покаже, як змінюється медіана.")
 
-    if not os.path.exists(VOTES_FILE):
+    if not os.path.exists(CURRENT_VOTES_FILE):
         st.warning("Немає даних голосування."); st.stop()
-    df_votes = pd.read_csv(VOTES_FILE)
+    df_votes = pd.read_csv(CURRENT_VOTES_FILE)
     if len(df_votes) == 0:
         st.warning("Немає голосів."); st.stop()
 
@@ -1193,7 +1192,7 @@ elif tab == "Зміна ранжувань":
     winners = sorted(winners_full, key=lambda x: scores[x], reverse=True)[:10]
 
     # оригінальні голоси
-    orig_triples = load_expert_triples_from_votes(VOTES_FILE, winners)
+    orig_triples = load_expert_triples_from_votes(CURRENT_VOTES_FILE, winners)
     if not orig_triples:
         st.warning("Немає валідних голосів для підмножини переможців."); st.stop()
 
@@ -1298,19 +1297,19 @@ elif tab == "Адмін":
         st.success("Доступ надано")
 
         st.subheader("Протокол голосування (ЛР1)")
-        if os.path.exists(VOTES_FILE):
-            df_v = pd.read_csv(VOTES_FILE)
+        if os.path.exists(CURRENT_VOTES_FILE):
+            df_v = pd.read_csv(CURRENT_VOTES_FILE)
             if st.session_state["conf_mode"]:
                 st.info("Конфіденційний режим: імена зашифровані")
             st.dataframe(df_v, use_container_width=True)
-            with open(VOTES_FILE, "rb") as fh:
-                st.download_button("Завантажити votes.csv", fh, "votes.csv", "text/csv")
+            with open(CURRENT_VOTES_FILE, "rb") as fh:
+                st.download_button("Завантажити votes_Астрономічні_обєкти.csv", fh, "votes_Астрономічні_обєкти.csv", "text/csv")
             if st.button("Очистити голоси ЛР1"):
-                pd.DataFrame(columns=["name","choice1","choice2","choice3"]).to_csv(VOTES_FILE, index=False)
+                pd.DataFrame(columns=["name","choice1","choice2","choice3"]).to_csv(CURRENT_VOTES_FILE, index=False)
                 log_action("Адмін", "Очищено голоси ЛР1")
                 st.success("Голоси видалено.")
         else:
-            st.info("Файл votes.csv не знайдено.")
+            st.info("Файл votes_Астрономічні_обєкти.csv не знайдено.")
 
         st.divider()
         st.subheader("Протокол голосування за евристики")
@@ -1347,7 +1346,7 @@ elif tab == "Адмін":
             buf = io.BytesIO()
             import zipfile
             with zipfile.ZipFile(buf, "w") as zf:
-                for fn in [VOTES_FILE, H_VOTES_FILE, LOG_FILE, DOMAIN_FILE]:
+                for fn in [CURRENT_VOTES_FILE, H_VOTES_FILE, LOG_FILE, DOMAIN_FILE]:
                     if os.path.exists(fn):
                         zf.write(fn)
             buf.seek(0)
