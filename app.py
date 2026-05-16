@@ -60,6 +60,7 @@ DOMAIN_2 = {
 }
 
 DOMAINS = {"Астрономічні об'єкти": DOMAIN_1, "Коштовне каміння": DOMAIN_2}
+
 CUSTOM_DOMAIN_FILE = "custom_domain.json"
 if os.path.exists(CUSTOM_DOMAIN_FILE):
     with open(CUSTOM_DOMAIN_FILE, "r", encoding="utf-8") as f:
@@ -68,10 +69,6 @@ if os.path.exists(CUSTOM_DOMAIN_FILE):
             DOMAINS[custom_domain_data["name"]] = custom_domain_data
         except Exception as e:
             st.error(f"Помилка читання власної області: {e}")
-DOMAINS = {
-    "Астрономічні об'єкти": DOMAIN_1,
-    "Коштовне каміння": DOMAIN_2
-}
 
 EXPERTS = [
     "Вiка","Анна","Іван","Ромчик","Анастасiя","Лiза","Валерiя","Лера","Даша",
@@ -88,14 +85,6 @@ HEURISTICS = {
     "E6": "Сума балів <= 3",
     "E7": "Об'єкт жодного разу не обирався на 1-му місці",
 }
-CUSTOM_DOMAIN_FILE = "custom_domain.json"
-if os.path.exists(CUSTOM_DOMAIN_FILE):
-    with open(CUSTOM_DOMAIN_FILE, "r", encoding="utf-8") as f:
-        try:
-            custom_domain_data = json.load(f)
-            DOMAINS[custom_domain_data["name"]] = custom_domain_data
-        except:
-            pass
 
 ADMIN_PASSWORD = "admin123"
 
