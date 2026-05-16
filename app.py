@@ -492,27 +492,25 @@ st.sidebar.subheader("Власна предметна область")
 uploaded_domain = st.sidebar.file_uploader("Завантажте .txt файл (по 1 об'єкту в рядку)", type=["txt"])
 
 if uploaded_domain is not None:
-    # Читаємо файл і розбиваємо на рядки
-    content = uploaded_domain.read().decode("utf-8").splitlines()
-    # Створюємо список об'єктів (ігноруючи порожні рядки)
-    custom_objects = [{"name": line.strip(), "img": ""} for line in content if line.strip()]
+    if st.session_state.get("last_uploaded_file") != uploaded_domain.name:
 
-    if len(custom_objects) >= 3:
-        custom_domain_name = "Власна область (Завантажено)"
-        custom_domain_dict = {"name": custom_domain_name, "objects": custom_objects}
+        content = uploaded_domain.read().decode("utf-8").splitlines()
+        custom_objects = [{"name": line.strip(), "img": ""} for line in content if line.strip()]
 
-        # Зберігаємо у локальний файл, щоб не зникало при оновленні сторінки
-        with open(CUSTOM_DOMAIN_FILE, "w", encoding="utf-8") as f:
-            json.dump(custom_domain_dict, f, ensure_ascii=False)
+        if len(custom_objects) >= 3:
+            custom_domain_name = "Власна область"
+            custom_domain_dict = {"name": custom_domain_name, "objects": custom_objects}
 
-        # Автоматично перемикаємо програму на цю нову область
-        st.session_state["domain_name"] = custom_domain_name
-        save_domain(custom_domain_name)
-        log_action("Користувач", "Завантажено власну предметну область")
-        st.sidebar.success("Успішно завантажено!")
-        st.rerun()
-    else:
-        st.sidebar.error("У файлі має бути щонайменше 3 об'єкти (щоб можна було обрати трійку).")
+            with open(CUSTOM_DOMAIN_FILE, "w", encoding="utf-8") as f:
+                json.dump(custom_domain_dict, f, ensure_ascii=False)
+
+            st.session_state["domain_name"] = custom_domain_name
+            st.session_state["last_uploaded_file"] = uploaded_domain.name
+
+            st.sidebar.success("Успішно завантажено")
+            st.rerun()
+        else:
+            st.sidebar.error("У файлі має бути щонайменше 3 об'єкти")
 
 # конфіденційний / відкритий режим (завдання 5)
 st.sidebar.subheader("Режим голосування")
