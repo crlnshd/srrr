@@ -465,6 +465,10 @@ if "domain_name" not in st.session_state: st.session_state["domain_name"] = load
 # ─────────────────────────────────────────────
 # ПОТОЧНА ПРЕДМЕТНА ОБЛАСТЬ
 # ─────────────────────────────────────────────
+
+if st.session_state["domain_name"] not in DOMAINS:
+    st.session_state["domain_name"] = "Астрономічні об'єкти"
+
 current_domain = DOMAINS[st.session_state["domain_name"]]
 OBJECTS = current_domain["objects"]
 OBJECT_NAMES = [o["name"] for o in OBJECTS]
