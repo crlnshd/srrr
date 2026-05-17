@@ -68,7 +68,7 @@ if os.path.exists(CUSTOM_DOMAIN_FILE):
             custom_domain_data = json.load(f)
             DOMAINS[custom_domain_data["name"]] = custom_domain_data
         except Exception as e:
-            st.error(f"Помилка читання власної області: {e}")
+            st.error(f"Помилка читання: {e}")
 
 EXPERTS = [
     "Вiка","Анна","Іван","Ромчик","Анастасiя","Лiза","Валерiя","Лера","Даша",
@@ -87,23 +87,15 @@ HEURISTICS = {
 }
 
 ADMIN_PASSWORD = "admin123"
-
-# файли даних
 H_VOTES_FILE = "heuristic_votes.csv"
 LOG_FILE     = "protocol.log"
 DOMAIN_FILE  = "current_domain.json"
 
-# ─────────────────────────────────────────────
-# ПРОТОКОЛЮВАННЯ (завдання 3)
-# ─────────────────────────────────────────────
 def log_action(role: str, action: str):
     ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with open(LOG_FILE, "a", encoding="utf-8") as f:
         f.write(f"[{ts}] [{role}] {action}\n")
 
-# ─────────────────────────────────────────────
-# ЗБЕРЕЖЕННЯ / ЗАВАНТАЖЕННЯ ПРЕДМЕТНОЇ ОБЛАСТІ (завдання 1)
-# ─────────────────────────────────────────────
 def save_domain(domain_name: str):
     with open(DOMAIN_FILE, "w", encoding="utf-8") as f:
         json.dump({"domain": domain_name}, f)
@@ -115,9 +107,6 @@ def load_domain_name() -> str:
             return data.get("domain", "Астрономічні об'єкти")
     return "Астрономічні об'єкти"
 
-# ─────────────────────────────────────────────
-# ПОЧАТКОВІ ДАНІ (насіннєві голоси за евристики)
-# ─────────────────────────────────────────────
 SEED_H_VOTES = [
     ("Вiка","E7","E6","E1"),("Анна","E6","E7","E2"),("Іван","E7","E1","E4"),
     ("Ромчик","E6","E4","E5"),("Анастасiя","E7","E5","E6"),("Лiза","E1","E6","E7"),
@@ -134,9 +123,6 @@ def init_h_votes_file():
 
 init_h_votes_file()
 
-# ─────────────────────────────────────────────
-# ФОН
-# ─────────────────────────────────────────────
 def set_bg(gif_path):
     if not os.path.exists(gif_path):
         return
@@ -152,9 +138,6 @@ h1,h2,h3,h4,h5,h6{{color:#00FFFF;}}
 
 set_bg("images/starfield.gif")
 
-# ─────────────────────────────────────────────
-# ДОПОМІЖНІ ФУНКЦІЇ
-# ─────────────────────────────────────────────
 def load_scores(votes_file, objects):
     obj_names = [o["name"] for o in objects]
     scores = {o: 0 for o in obj_names}
@@ -239,7 +222,6 @@ def brute_force_median(objects_subset, triples, heuristic="E1",
     all_perms = list(itertools.permutations(objects_subset))
     total = len(all_perms)
     for idx, perm in enumerate(all_perms):
-        # управління обчисленнями (завдання 7)
         if pause_event and pause_event.is_set():
             if resume_event:
                 resume_event.wait()
@@ -454,17 +436,11 @@ def genetic_rank(objects_subset, expert_perms, fitness_mode="sum",
         popul = new_pop
     return best_perm, -best_fit, history, improve_iters, len(best_solutions)
 
-# ─────────────────────────────────────────────
-# СЕСІЙНИЙ СТАН (для управління обчисленнями та конфіденційності)
-# ─────────────────────────────────────────────
 if "paused" not in st.session_state: st.session_state["paused"] = False
 if "conf_mode" not in st.session_state: st.session_state["conf_mode"] = True
 if "lr3_results" not in st.session_state: st.session_state["lr3_results"] = None
 if "domain_name" not in st.session_state: st.session_state["domain_name"] = load_domain_name()
 
-# ─────────────────────────────────────────────
-# ПОТОЧНА ПРЕДМЕТНА ОБЛАСТЬ
-# ─────────────────────────────────────────────
 
 if st.session_state["domain_name"] not in DOMAINS:
     st.session_state["domain_name"] = "Астрономічні об'єкти"
@@ -476,12 +452,9 @@ OBJECT_NAMES = [o["name"] for o in OBJECTS]
 safe_domain_name = st.session_state["domain_name"].replace(" ", "_").replace("'", "")
 CURRENT_VOTES_FILE = f"votes_{safe_domain_name}.csv"
 scores, counts = load_scores(CURRENT_VOTES_FILE, OBJECTS)
-# ─────────────────────────────────────────────
-# БІЧНА ПАНЕЛЬ
-# ─────────────────────────────────────────────
+
 st.sidebar.title("Навігація")
 
-# перемикач предметної області (завдання 1)
 st.sidebar.subheader("Предметна область")
 domain_choice = st.sidebar.selectbox(
     "Оберіть предметну область",
@@ -518,7 +491,6 @@ if uploaded_domain is not None:
         else:
             st.sidebar.error("У файлі має бути щонайменше 3 об'єкти")
 
-# конфіденційний / відкритий режим (завдання 5)
 st.sidebar.subheader("Режим голосування")
 conf_toggle = st.sidebar.toggle(
     "Конфіденційний режим",
@@ -526,39 +498,35 @@ conf_toggle = st.sidebar.toggle(
 )
 st.session_state["conf_mode"] = conf_toggle
 mode_label = "Конфіденційний" if conf_toggle else "Відкритий"
-st.sidebar.caption(f"Поточний режим: **{mode_label}**")
+st.sidebar.caption(f"Поточний режим: {mode_label}")
 
 tab = st.sidebar.selectbox("Розділ", [
-    "Голосування (ЛР1)",
-    "Результати ЛР1",
+    "Голосування",
+    "Результати голосування",
     "Голосування за евристики",
     "Застосування евристик",
     "Генетичний алгоритм",
-    "ЛР3",
-    "ЛР4",
+    "Визначення колективного ранжування об’єктів",
+    "Розподілені обчислення компромісних ранжувань та визначення індексів задоволеності експертів колективним розв’язком",
     "Зміна ранжувань",
     "Допомога",
     "Адмін",
 ])
 
-# ─────────────────────────────────────────────
-# ПІДСИСТЕМА ДОПОМОГИ (завдання 2)
-# ─────────────────────────────────────────────
 HELP_TEXT = {
-    "Голосування (ЛР1)": (
-        "**Як голосувати?**\n\n"
+    "Голосування": (
+        "Як голосувати?\n\n"
         "1. Введіть своє ім'я у поле «Ваше ім'я».\n"
         "2. У конфіденційному режимі ім'я буде приховане в протоколі.\n"
-        "3. Оберіть 3 різних об'єкти у порядку пріоритету (1-й — найважливіший).\n"
-        "4. Натисніть **Проголосувати**.\n"
-        "5. Зображення об'єктів відображаються внизу для зручності вибору."
+        "3. Оберіть 3 різних об'єкти у порядку пріоритету (1-й найважливіший).\n"
+        "4. Натисніть «Проголосувати».\n"
     ),
-    "Результати ЛР1": (
-        "**Результати голосування (ЛР1)**\n\n"
-        "Тут відображається таблиця з підсумками голосування:\n"
-        "- 1-е місце = 3 бали, 2-е = 2, 3-є = 1.\n"
-        "- Графік показує розподіл балів між об'єктами.\n"
-        "- Дані використовуються в подальших лабораторних роботах."
+    "Результати голосування": (
+        "Результати голосування\n\n"
+        "1. Таблиця з підсумками голосування:\n"
+        "2. 1-е місце = 3 бали, 2-е = 2, 3-є = 1.\n"
+        "3. Графік показує розподіл балів між об'єктами.\n"
+        "4. Дані використовуються в подальших лабораторних роботах."
     ),
     "Голосування за евристики": (
         "**Евристики** — правила для відсіювання найменш популярних об'єктів.\n\n"
@@ -901,95 +869,139 @@ elif tab == "ЛР3":
     heuristic_key = "E1" if "E1" in heuristic_choice else "E2"
 
     # управління обчисленнями (завдання 7)
-    col_run, col_pause = st.columns(2)
-    run_btn = col_run.button("Запустити", key="run_brute")
-    if col_pause.button("Пауза / Відновити", key="pause_btn"):
-        st.session_state["paused"] = not st.session_state["paused"]
-        state_str = "призупинено" if st.session_state["paused"] else "відновлено"
-        st.info(f"Обчислення {state_str}")
-
-    if run_btn:
-        log_action("Користувач", f"Запущено повний перебір ЛР3, евристика: {heuristic_key}")
-        progress_bar = st.progress(0)
-        dist_fn = cook_distance_e1 if heuristic_key == "E1" else cook_distance_e2
-        min_sum = float("inf"); min_max = float("inf")
-        best_perms_sum = []; best_perms_max = []; sample_rows = []
-        all_perms = list(itertools.permutations(winners))
-        total = len(all_perms)
-
-        # ілюстрація динаміки обчислень (завдання 7)
-        dyn_placeholder = st.empty()
-        dyn_sum_history = []; dyn_max_history = []
-
-        for idx, perm in enumerate(all_perms):
-            # пауза
-            while st.session_state.get("paused", False):
-                time.sleep(0.1)
-            p_list = list(perm)
-            dists = [dist_fn(p_list, t) for t in triples]
-            s = sum(dists); m = max(dists) if dists else 0
-            dyn_sum_history.append(s); dyn_max_history.append(m)
-            if idx < 50:
-                row = {"№": idx+1, "Перестановка": " > ".join(p_list)}
-                for i, d in enumerate(dists): row[f"d{i+1}"] = d
-                row["Сума"] = s; row["Макс"] = m
-                sample_rows.append(row)
-            if s < min_sum: min_sum = s; best_perms_sum = [p_list]
-            elif s == min_sum: best_perms_sum.append(p_list)
-            if m < min_max: min_max = m; best_perms_max = [p_list]
-            elif m == min_max: best_perms_max.append(p_list)
-            progress_bar.progress((idx+1) / total)
-
-        # зберігаємо результати в сесійний стан (завдання 6)
-        st.session_state["lr3_results"] = {
-            "winners": winners, "triples": triples,
-            "best_sum": best_perms_sum, "best_max": best_perms_max,
-            "min_sum": min_sum, "min_max": min_max,
-            "heuristic": heuristic_key
+    if "lr3_state" not in st.session_state:
+        st.session_state["lr3_state"] = {
+            "status": "idle",  # "idle", "running", "paused", "finished"
+            "idx": 0, "min_sum": float("inf"), "min_max": float("inf"),
+            "best_sum": [], "best_max": [], "sample_rows": [], "dyn_sum": []
         }
-        log_action("Користувач", f"ЛР3 завершено. Мін.сума={min_sum}, Мін.макс={min_max}")
 
-        st.subheader("Перші 50 рядків таблиці відстаней")
-        st.dataframe(pd.DataFrame(sample_rows), use_container_width=True, hide_index=True)
+    col_run, col_pause, col_reset = st.columns(3)
+
+    if col_run.button("Запустити", key="run_brute"):
+        log_action("Користувач", f"Запущено ЛР3, евристика: {heuristic_key}")
+        st.session_state["lr3_state"] = {
+            "status": "running", "idx": 0, "min_sum": float("inf"), "min_max": float("inf"),
+            "best_sum": [], "best_max": [], "sample_rows": [], "dyn_sum": []
+        }
+        st.rerun()
+
+    if col_pause.button("Пауза / Відновити", key="pause_btn"):
+        current_status = st.session_state["lr3_state"]["status"]
+        if current_status == "running":
+            st.session_state["lr3_state"]["status"] = "paused"
+            log_action("Користувач", "ЛР3: Обчислення призупинено")
+        elif current_status == "paused":
+            st.session_state["lr3_state"]["status"] = "running"
+            log_action("Користувач", "ЛР3: Обчислення відновлено")
+        st.rerun()
+
+    if col_reset.button("Скинути результати", key="reset_btn"):
+        st.session_state["lr3_state"]["status"] = "idle"
+        st.session_state["lr3_state"]["idx"] = 0
+        st.rerun()
+
+    state = st.session_state["lr3_state"]
+    status_msg = {
+        "idle": "Очікування запуску...",
+        "running": "⏳ Обчислення тривають... (можете натиснути Паузу)",
+        "paused": "⏸ Обчислення ПРИЗУПИНЕНО. Натисніть 'Відновити'",
+        "finished": "✅ Обчислення повністю завершено!"
+    }
+    st.info(status_msg[state["status"]])
+
+    all_perms = list(itertools.permutations(winners))
+    total = len(all_perms)
+    progress_bar = st.progress(state["idx"] / total if total > 0 else 0)
+
+    # ЛОГІКА ЧАНКІНГУ (обчислення блоками)
+    if state["status"] == "running":
+        dist_fn = cook_distance_e1 if heuristic_key == "E1" else cook_distance_e2
+
+        CHUNK_SIZE = 40000  # Обробляємо по 40 тисяч за один цикл
+        start_idx = state["idx"]
+        end_idx = min(start_idx + CHUNK_SIZE, total)
+
+        for i in range(start_idx, end_idx):
+            p_list = list(all_perms[i])
+            dists = [dist_fn(p_list, t) for t in triples]
+            s = sum(dists);
+            m = max(dists) if dists else 0
+
+            state["dyn_sum"].append(s)
+
+            if i < 50:
+                row = {"№": i + 1, "Перестановка": " > ".join(p_list)}
+                for j, d in enumerate(dists): row[f"d{j + 1}"] = d
+                row["Сума"] = s;
+                row["Макс"] = m
+                state["sample_rows"].append(row)
+
+            if s < state["min_sum"]:
+                state["min_sum"] = s;
+                state["best_sum"] = [p_list]
+            elif s == state["min_sum"]:
+                state["best_sum"].append(p_list)
+
+            if m < state["min_max"]:
+                state["min_max"] = m;
+                state["best_max"] = [p_list]
+            elif m == state["min_max"]:
+                state["best_max"].append(p_list)
+
+        state["idx"] = end_idx
+        if end_idx >= total:
+            state["status"] = "finished"
+            log_action("Користувач", f"ЛР3 завершено. Мін.сума={state['min_sum']}")
+
+        st.rerun()  # Перезавантаження для читання кнопок та запуску наступного блоку
+
+    # ВІДОБРАЖЕННЯ РЕЗУЛЬТАТІВ
+    if state["idx"] > 0:
+        if len(state["sample_rows"]) > 0:
+            st.subheader("Перші 50 рядків таблиці відстаней")
+            st.dataframe(pd.DataFrame(state["sample_rows"]), use_container_width=True, hide_index=True)
 
         st.subheader("Мінімальні значення")
         cm1, cm2 = st.columns(2)
-        cm1.metric("Мін. сума відстаней", min_sum)
-        cm2.metric("Мін. максимум відстані", min_max)
+        cm1.metric("Мін. сума відстаней", state["min_sum"])
+        cm2.metric("Мін. максимум відстані", state["min_max"])
 
-        st.subheader("Медіани за критерієм мін. суми відстаней")
-        st.markdown(f"Знайдено {len(best_perms_sum)} перестановок із сумою = {min_sum}:")
-        for p in best_perms_sum[:5]: st.markdown(f"**{' > '.join(p)}**")
+        if state["status"] in ["paused", "finished"]:
+            st.subheader("Медіани за критерієм мін. суми відстаней")
+            st.markdown(f"Знайдено {len(state['best_sum'])} перестановок із сумою = {state['min_sum']}:")
+            for p in state["best_sum"][:5]: st.markdown(f"**{' > '.join(p)}**")
 
-        st.subheader("Медіани за критерієм мін. максимуму відстані")
-        for p in best_perms_max[:5]: st.markdown(f"{' > '.join(p)}")
+            st.subheader("Медіани за критерієм мін. максимуму відстані")
+            for p in state["best_max"][:5]: st.markdown(f"{' > '.join(p)}")
 
-        st.subheader("Відновлення ранжувань об'єктів")
-        rs = restore_ranking(best_perms_sum[:5], winners)
-        rs.index = [f"Медіана {i+1}" for i in range(len(rs))]
-        st.dataframe(rs, use_container_width=True)
+            st.subheader("Відновлення ранжувань об'єктів")
+            rs = restore_ranking(state["best_sum"][:5], winners)
+            rs.index = [f"Медіана {i + 1}" for i in range(len(rs))]
+            st.dataframe(rs, use_container_width=True)
 
-        # графічна ілюстрація медіан (завдання 8)
-        st.subheader("Графік: суми відстаней по перестановках")
-        fig, ax = plt.subplots(figsize=(7, 2.5)); fig.patch.set_alpha(0); ax.set_facecolor("none")
-        ax.plot(dyn_sum_history[:500], color="cyan", alpha=0.7, linewidth=0.6, label="Сума")
-        ax.axhline(min_sum, color="orange", linestyle="--", label=f"Мін={min_sum}")
-        ax.set_xlabel("Перестановка", color="white"); ax.set_ylabel("Відстань", color="white")
-        ax.tick_params(colors="white"); ax.legend(facecolor="black", labelcolor="white")
-        for sp in ax.spines.values(): sp.set_color("white")
-        st.pyplot(fig)
+            st.subheader("Графік: суми відстаней по перестановках")
+            fig, ax = plt.subplots(figsize=(7, 2.5));
+            fig.patch.set_alpha(0);
+            ax.set_facecolor("none")
+            ax.plot(state["dyn_sum"][:500], color="cyan", alpha=0.7, linewidth=0.6, label="Сума")
+            ax.axhline(state["min_sum"], color="orange", linestyle="--", label=f"Мін={state['min_sum']}")
+            ax.set_xlabel("Перестановка", color="white");
+            ax.set_ylabel("Відстань", color="white")
+            ax.tick_params(colors="white");
+            ax.legend(facecolor="black", labelcolor="white")
+            for sp in ax.spines.values(): sp.set_color("white")
+            st.pyplot(fig)
 
-        # вивід у файл (завдання 9)
-        output = io.StringIO()
-        output.write("ЛР3 — Результати\n\n")
-        output.write(f"Евристика: {heuristic_key}\nОб'єкти: {', '.join(winners)}\n\n")
-        output.write(f"Мін. сума: {min_sum}\nМедіани (сума):\n")
-        for p in best_perms_sum: output.write("  " + " > ".join(p) + "\n")
-        output.write(f"\nМін. макс.: {min_max}\nМедіани (макс.):\n")
-        for p in best_perms_max: output.write("  " + " > ".join(p) + "\n")
-        st.download_button("Зберегти результати ЛР3 у .txt",
-                           data=output.getvalue().encode("utf-8"),
-                           file_name="lab3_results.txt", mime="text/plain")
+            # вивід у файл
+            output = io.StringIO()
+            output.write("ЛР3 — Результати\n\n")
+            output.write(f"Евристика: {heuristic_key}\nОб'єкти: {', '.join(winners)}\n\n")
+            output.write(f"Мін. сума: {state['min_sum']}\nМедіани (сума):\n")
+            for p in state["best_sum"]: output.write("  " + " > ".join(p) + "\n")
+            st.download_button("Зберегти результати ЛР3 у .txt",
+                               data=output.getvalue().encode("utf-8"),
+                               file_name="lab3_results.txt", mime="text/plain")
 
     # ГА для ЛР3
     st.divider(); st.header("Еволюційний алгоритм (ГА)")
