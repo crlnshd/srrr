@@ -572,16 +572,13 @@ HELP_TEXT = {
     ),
 }
 
-# ─────────────────────────────────────────────
-# ГОЛОСУВАННЯ (ЛР1) — завдання 4, 5, 6, 7
-# ─────────────────────────────────────────────
-if tab == "Голосування (ЛР1)":
+if tab == "Голосування":
     with st.expander("Допомога"):
         st.markdown(HELP_TEXT["Голосування (ЛР1)"])
 
     st.title("Система експертного голосування — ЛР1")
     st.markdown(f"**Предметна область:** {current_domain['name']}")
-    mode_badge = "🔒 Конфіденційний режим" if st.session_state["conf_mode"] else "🔓 Відкритий режим"
+    mode_badge = "Конфіденційний режим" if st.session_state["conf_mode"] else "Відкритий режим"
     st.info(mode_badge)
 
     st.write("Введіть ім'я та оберіть **3 об'єкти** у порядку пріоритету")
@@ -598,7 +595,6 @@ if tab == "Голосування (ЛР1)":
         elif len({choice1, choice2, choice3}) < 3:
             st.error("Оберіть 3 різні об'єкти")
         else:
-            # конфіденційний режим: хешуємо ім'я (завдання 5)
             if st.session_state["conf_mode"]:
                 saved_name = hashlib.sha256(name.strip().encode()).hexdigest()[:10]
                 st.success(f"Ваш голос збережено (конфіденційно). Ваш код: `{saved_name}`")
@@ -630,10 +626,7 @@ if tab == "Голосування (ЛР1)":
         except:
             col.write(obj["name"])
 
-# ─────────────────────────────────────────────
-# РЕЗУЛЬТАТИ ЛР1
-# ─────────────────────────────────────────────
-elif tab == "Результати ЛР1":
+elif tab == "Результати голосування":
     with st.expander("Допомога"):
         st.markdown(HELP_TEXT["Результати ЛР1"])
 
@@ -814,7 +807,7 @@ elif tab == "Генетичний алгоритм":
 # ─────────────────────────────────────────────
 # ЛР3 — з управлінням обчисленнями (завдання 7)
 # ─────────────────────────────────────────────
-elif tab == "ЛР3":
+elif tab == "Визначення колективного ранжування об’єктів":
     with st.expander("Допомога"):
         st.markdown(HELP_TEXT["ЛР3"])
 
@@ -869,123 +862,139 @@ elif tab == "ЛР3":
     heuristic_key = "E1" if "E1" in heuristic_choice else "E2"
 
     # управління обчисленнями (завдання 7)
-    if "is_calculating" not in st.session_state:
-        st.session_state["is_calculating"] = False
+    if "lr3_state" not in st.session_state:
+        st.session_state["lr3_state"] = {"status": "idle"}
 
-    col_run, col_pause = st.columns(2)
+        # 2. Кнопки управління
+    col_run, col_pause, col_reset = st.columns(3)
 
-    # 1. Кнопка ЗАПУСТИТИ
-    if col_run.button("Запустити", key="run_brute"):
-        st.session_state["is_calculating"] = True
-        st.session_state["paused"] = False
-
-    # 2. Кнопка ПАУЗА / ВІДНОВИТИ
-    if col_pause.button("Пауза / Відновити", key="pause_btn"):
-        st.session_state["paused"] = not st.session_state["paused"]
-        # Якщо ми зняли з паузи — даємо команду рахувати заново
-        if not st.session_state["paused"]:
-            st.session_state["is_calculating"] = True
-
-    # 3. Вивід статусу
-    if st.session_state["paused"]:
-        st.warning(""
-                   "Обчислення призупинено")
-    elif st.session_state["is_calculating"]:
-        st.info(""
-                "Обчислення триває"
-                "")
-
-    if st.session_state["is_calculating"] and not st.session_state["paused"]:
-        log_action("Користувач", f"Запущено повний перебір ЛР3, евристика: {heuristic_key}")
-        progress_bar = st.progress(0)
-        dist_fn = cook_distance_e1 if heuristic_key == "E1" else cook_distance_e2
-        min_sum = float("inf");
-        min_max = float("inf")
-        best_perms_sum = [];
-        best_perms_max = [];
-        sample_rows = []
-        all_perms = list(itertools.permutations(winners))
-        total = len(all_perms)
-
-        # ілюстрація динаміки обчислень (завдання 7)
-        dyn_placeholder = st.empty()
-        dyn_sum_history = [];
-        dyn_max_history = []
-
-        for idx, perm in enumerate(all_perms):
-            p_list = list(perm)
-            dists = [dist_fn(p_list, t) for t in triples]
-            s = sum(dists);
-            m = max(dists) if dists else 0
-            dyn_sum_history.append(s);
-            dyn_max_history.append(m)
-
-            if idx < 50:
-                row = {"№": idx + 1, "Перестановка": " > ".join(p_list)}
-                for i, d in enumerate(dists): row[f"d{i + 1}"] = d
-                row["Сума"] = s;
-                row["Макс"] = m
-                sample_rows.append(row)
-
-            if s < min_sum:
-                min_sum = s; best_perms_sum = [p_list]
-            elif s == min_sum:
-                best_perms_sum.append(p_list)
-            if m < min_max:
-                min_max = m; best_perms_max = [p_list]
-            elif m == min_max:
-                best_perms_max.append(p_list)
-
-            # Оновлюємо прогрес-бар
-            if idx % max(1, total // 50) == 0:
-                progress_bar.progress((idx + 1) / total)
-
-        # Дійшли до кінця - вимикаємо стан калькуляції
-        st.session_state["is_calculating"] = False
-        progress_bar.progress(1.0)
-        st.success("Обчислення завершено")
-
-        st.session_state["lr3_results"] = {
-            "winners": winners, "triples": triples,
-            "best_sum": best_perms_sum, "best_max": best_perms_max,
-            "min_sum": min_sum, "min_max": min_max,
-            "heuristic": heuristic_key
+    if col_run.button("Запустити перебір", key="run_brute"):
+        # Обнуляємо всі дані перед новим запуском
+        st.session_state["lr3_state"] = {
+            "status": "running", "idx": 0,
+            "min_sum": float("inf"), "min_max": float("inf"),
+            "best_sum": [], "best_max": [], "samples": [],
+            "dyn_sum": []
         }
-        log_action("Користувач", f"ЛР3 завершено. Мін.сума={min_sum}, Мін.макс={min_max}")
+        st.rerun()
 
-        st.subheader("Перші 50 рядків таблиці відстаней")
-        st.dataframe(pd.DataFrame(sample_rows), use_container_width=True, hide_index=True)
+    if col_pause.button("Пауза / Відновити", key="pause_btn"):
+        if st.session_state["lr3_state"]["status"] == "running":
+            st.session_state["lr3_state"]["status"] = "paused"
+        elif st.session_state["lr3_state"]["status"] == "paused":
+            st.session_state["lr3_state"]["status"] = "running"
+        st.rerun()
 
-        st.subheader("Мінімальні значення")
-        cm1, cm2 = st.columns(2)
-        cm1.metric("Мін. сума відстаней", min_sum)
-        cm2.metric("Мін. максимум відстані", min_max)
+    if col_reset.button("Скинути", key="reset_btn"):
+        st.session_state["lr3_state"]["status"] = "idle"
+        st.rerun()
 
-        st.subheader("Медіани за критерієм мін. суми відстаней")
-        st.markdown(f"Знайдено {len(best_perms_sum)} перестановок із сумою = {min_sum}:")
-        for p in best_perms_sum[:5]: st.markdown(f"**{' > '.join(p)}**")
+    # 3. БЛОК ОБЧИСЛЕНЬ
+    state = st.session_state["lr3_state"]
 
-        st.subheader("Медіани за критерієм мін. максимуму відстані")
-        for p in best_perms_max[:5]: st.markdown(f"{' > '.join(p)}")
+    if state["status"] in ["running", "paused", "finished"]:
+        # Виводимо "живий" прогрес-бар
+        progress_val = state["idx"] / n_fact if n_fact > 0 else 0
+        st.progress(progress_val)
+        st.write(f"Оброблено комбінацій: **{state['idx']}** з **{n_fact}**")
 
-        st.subheader("Відновлення ранжувань об'єктів")
-        rs = restore_ranking(best_perms_sum[:5], winners)
-        rs.index = [f"Медіана {i + 1}" for i in range(len(rs))]
-        st.dataframe(rs, use_container_width=True)
+        if state["status"] == "paused":
+            st.warning("⏸ Обчислення призупинено. Натисніть 'Пауза / Відновити', щоб продовжити.")
 
-        # вивід у файл (завдання 9)
-        output = io.StringIO()
-        output.write("ЛР3 Результати\n\n")
-        output.write(f"Евристика: {heuristic_key}\nОб'єкти: {', '.join(winners)}\n\n")
-        output.write(f"Мін. сума: {min_sum}\nМедіани (сума):\n")
-        for p in best_perms_sum: output.write("  " + " > ".join(p) + "\n")
-        output.write(f"\nМін. макс.: {min_max}\nМедіани (макс.):\n")
-        for p in best_perms_max: output.write("  " + " > ".join(p) + "\n")
-        st.download_button("Зберегти результати ЛР3 у .txt",
-                           data=output.getvalue().encode("utf-8"),
-                           file_name="lab3_results.txt", mime="text/plain")
+        elif state["status"] == "running":
+            dist_fn = cook_distance_e1 if heuristic_key == "E1" else cook_distance_e2
 
+            # ОБЧИСЛЮЄМО ПОРЦІЯМИ (наприклад, по 5000 штук за раз)
+            CHUNK_SIZE = 5000
 
+            # Розумний генератор: пропускає вже пораховані і бере наступну порцію
+            perms_gen = itertools.permutations(winners)
+            chunk = itertools.islice(perms_gen, state["idx"], state["idx"] + CHUNK_SIZE)
+
+            for perm in chunk:
+                p_list = list(perm)
+                dists = [dist_fn(p_list, t) for t in triples]
+                s = sum(dists)
+                m = max(dists) if dists else 0
+
+                state["dyn_sum"].append(s)
+
+                if state["idx"] < 50:
+                    row = {"№": state["idx"] + 1, "Перестановка": " > ".join(p_list)}
+                    for i, d in enumerate(dists): row[f"d{i + 1}"] = d
+                    row["Сума"] = s
+                    row["Макс"] = m
+                    state["samples"].append(row)
+
+                if s < state["min_sum"]:
+                    state["min_sum"] = s
+                    state["best_sum"] = [p_list]
+                elif s == state["min_sum"]:
+                    state["best_sum"].append(p_list)
+
+                if m < state["min_max"]:
+                    state["min_max"] = m
+                    state["best_max"] = [p_list]
+                elif m == state["min_max"]:
+                    state["best_max"].append(p_list)
+
+                state["idx"] += 1
+
+            # Якщо дійшли до кінця (перебрали всі n!)
+            if state["idx"] >= n_fact:
+                state["status"] = "finished"
+
+            # Перезапускаємо інтерфейс для обчислення наступної порції
+            time.sleep(0.01)  # Даємо браузеру мілісекунду "на вдих"
+            st.rerun()
+
+        # 4. ВИВІД РЕЗУЛЬТАТІВ (ТІЛЬКИ ПІСЛЯ ПОВНОГО ЗАВЕРШЕННЯ)
+        if state["status"] == "finished":
+            st.success("✅ Обчислення повністю завершено!")
+
+            st.subheader("Перші 50 рядків таблиці відстаней")
+            st.dataframe(pd.DataFrame(state["samples"]), use_container_width=True, hide_index=True)
+
+            st.subheader("Мінімальні значення")
+            cm1, cm2 = st.columns(2)
+            cm1.metric("Мін. сума відстаней", state["min_sum"])
+            cm2.metric("Мін. максимум відстані", state["min_max"])
+
+            st.subheader("Медіани за критерієм мін. суми відстаней")
+            st.markdown(f"Знайдено {len(state['best_sum'])} перестановок із сумою = {state['min_sum']}:")
+            for p in state["best_sum"][:5]: st.markdown(f"**{' > '.join(p)}**")
+
+            st.subheader("Медіани за критерієм мін. максимуму відстані")
+            for p in state["best_max"][:5]: st.markdown(f"{' > '.join(p)}")
+
+            st.subheader("Відновлення ранжувань об'єктів")
+            rs = restore_ranking(state["best_sum"][:5], winners)
+            rs.index = [f"Медіана {i + 1}" for i in range(len(rs))]
+            st.dataframe(rs, use_container_width=True)
+
+            st.subheader("Графік: суми відстаней по перестановках")
+            fig, ax = plt.subplots(figsize=(7, 2.5))
+            fig.patch.set_alpha(0)
+            ax.set_facecolor("none")
+            ax.plot(state["dyn_sum"][:500], color="cyan", alpha=0.7, linewidth=0.6, label="Сума")
+            ax.axhline(state["min_sum"], color="orange", linestyle="--", label=f"Мін={state['min_sum']}")
+            ax.set_xlabel("Перестановка", color="white")
+            ax.set_ylabel("Відстань", color="white")
+            ax.tick_params(colors="white")
+            ax.legend(facecolor="black", labelcolor="white")
+            for sp in ax.spines.values(): sp.set_color("white")
+            st.pyplot(fig)
+
+            output = io.StringIO()
+            output.write("ЛР3 — Результати\n\n")
+            output.write(f"Евристика: {heuristic_key}\nОб'єкти: {', '.join(winners)}\n\n")
+            output.write(f"Мін. сума: {state['min_sum']}\nМедіани (сума):\n")
+            for p in state["best_sum"]: output.write("  " + " > ".join(p) + "\n")
+            output.write(f"\nМін. макс.: {state['min_max']}\nМедіани (макс.):\n")
+            for p in state["best_max"]: output.write("  " + " > ".join(p) + "\n")
+            st.download_button("Зберегти результати ЛР3 у .txt",
+                               data=output.getvalue().encode("utf-8"),
+                               file_name="lab3_results.txt", mime="text/plain")
     # ГА для ЛР3
     st.divider(); st.header("Еволюційний алгоритм (ГА)")
     if st.button("Запустити ГА", key="run_ga_lr3"):
@@ -1048,7 +1057,7 @@ elif tab == "ЛР3":
 # ─────────────────────────────────────────────
 # ЛР4
 # ─────────────────────────────────────────────
-elif tab == "ЛР4":
+elif tab == "Розподілені обчислення компромісних ранжувань та визначення індексів задоволеності експертів колективним розв’язком":
     with st.expander("Допомога"):
         st.markdown(HELP_TEXT["ЛР4"])
 
@@ -1285,9 +1294,6 @@ elif tab == "Допомога":
 - Вивід результатів на екран та у файли .txt / .csv
     """)
 
-# ─────────────────────────────────────────────
-# АДМІН (завдання 3, 6, 9)
-# ─────────────────────────────────────────────
 elif tab == "Адмін":
     st.title("Адміністративна панель")
     password = st.text_input("Пароль", type="password")
